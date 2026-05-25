@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="AGUI_Console_Client/AGUI_Console_Client.csproj" Id="23086a2d-2ca7-4eba-b8b1-93d818d781c4" />
+  <Project Path="EnterpriseAgentTools/EnterpriseAgentTools.csproj" />
+  <Project Path="Enterprise_AI_Samples/Enterprise_AI_Samples.csproj" />
+  <Project Path="Enterprise_Log_Agent/Enterprise_Log_Agent.csproj" />
+</Solution>

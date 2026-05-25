@@ -1,0 +1,111 @@
+<!-- Toolbar -->
+<mat-toolbar color="primary" class="chat-toolbar">
+  <mat-icon class="toolbar-icon">smart_toy</mat-icon>
+  <span class="toolbar-title">AG-UI Chat</span>
+  <span class="spacer"></span>
+  @if (hasMessages()) {
+    <button mat-icon-button matTooltip="Clear chat" (click)="onClear()">
+      <mat-icon>delete_outline</mat-icon>
+    </button>
+  }
+</mat-toolbar>
+
+<!-- Loading bar -->
+@if (isLoading()) {
+  <mat-progress-bar mode="indeterminate" class="loading-bar"></mat-progress-bar>
+}
+
+<!-- Messages area -->
+<div class="messages-container" #messagesContainer>
+  @if (!hasMessages()) {
+    <div class="empty-state">
+      <mat-icon class="empty-icon">chat_bubble_outline</mat-icon>
+      <h2>Start a conversation</h2>
+      <p>Send a message or upload a file to begin chatting with the agent.</p>
+    </div>
+  }
+
+  @for (message of messages(); track message.id) {
+    <div class="message-row" [class.user]="message.role === 'user'" [class.assistant]="message.role === 'assistant'">
+      <div class="message-avatar">
+        <mat-icon>{{ message.role === 'user' ? 'person' : 'smart_toy' }}</mat-icon>
+      </div>
+      <mat-card class="message-card" [class.user-card]="message.role === 'user'" [class.assistant-card]="message.role === 'assistant'">
+        <!-- Attachments -->
+        @if (message.attachments?.length) {
+          <div class="attachments-list">
+            @for (file of message.attachments; track file.name) {
+              <div class="attachment-chip">
+                <mat-icon class="attachment-icon">attach_file</mat-icon>
+                <span class="attachment-name">{{ file.name }}</span>
+                <span class="attachment-size">({{ formatFileSize(file.size) }})</span>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Content -->
+        @if (message.role === 'assistant') {
+          <div class="message-content markdown-body" [innerHTML]="renderMarkdown(message.content)"></div>
+          @if (isLoading() && message === messages()[messages().length - 1] && !message.content) {
+            <div class="typing-indicator">
+              <span></span><span></span><span></span>
+            </div>
+          }
+        } @else {
+          <div class="message-content">{{ message.content }}</div>
+        }
+
+        <div class="message-time">
+          {{ message.timestamp | date:'shortTime' }}
+        </div>
+      </mat-card>
+    </div>
+  }
+</div>
+
+<!-- Pending files -->
+@if (pendingFiles().length) {
+  <div class="pending-files">
+    @for (file of pendingFiles(); track $index) {
+      <mat-chip-row (removed)="removeFile($index)">
+        <mat-icon matChipAvatar>attach_file</mat-icon>
+        {{ file.name }} ({{ formatFileSize(file.size) }})
+        <button matChipRemove>
+          <mat-icon>cancel</mat-icon>
+        </button>
+      </mat-chip-row>
+    }
+  </div>
+}
+
+<!-- Input area -->
+<div class="input-area">
+  <input type="file" #fileInput hidden multiple (change)="onFileSelected($event)"
+         accept="image/*,.pdf,.txt,.csv,.json,.xml,.doc,.docx,.xls,.xlsx,.md" />
+
+  <button mat-icon-button matTooltip="Attach files" (click)="triggerFileUpload()" [disabled]="isLoading()">
+    <mat-icon>attach_file</mat-icon>
+  </button>
+
+  <mat-form-field class="message-input" appearance="outline" subscriptSizing="dynamic">
+    <input matInput
+           placeholder="Type a message..."
+           [(ngModel)]="userInput"
+           (keydown)="onKeyDown($event)"
+           [disabled]="isLoading()"
+           autocomplete="off" />
+  </mat-form-field>
+
+  @if (isLoading()) {
+    <button mat-icon-button matTooltip="Cancel" (click)="onCancel()" color="warn">
+      <mat-icon>stop_circle</mat-icon>
+    </button>
+  } @else {
+    <button mat-icon-button matTooltip="Send" (click)="onSend()"
+            [disabled]="!userInput().trim() && pendingFiles().length === 0"
+            color="primary">
+      <mat-icon>send</mat-icon>
+    </button>
+  }
+</div>
