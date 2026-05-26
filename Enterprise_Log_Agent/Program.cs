@@ -8,10 +8,8 @@ using Microsoft.Agents.AI.GitHub.Copilot;
 using Microsoft.Agents.AI.Hosting.AGUI.AspNetCore;
 using Microsoft.Extensions.AI;
 
-await FolderUtility.EmptyAgentTempFolder();
-
 const string AgentName = "cae-log-agent";
-var databasePath = Path.Combine("C:\\CAE_Release_Installers\\win-x64\\logs", "logs.db3");
+var databasePath = Path.Combine("C:\\CAE_Release_Installers\\Cae_web_backend_4.3.0-beta.1472\\win-x64\\logs", "logs.db3");
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddLogRagServices(databasePath);

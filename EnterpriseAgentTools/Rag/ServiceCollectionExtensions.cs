@@ -1,5 +1,6 @@
 using CAEAgentTools.AgentTools;
 using CAEAgentTools.VectorStore;
+using EnterpriseAgentTools.VectorStore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CAEAgentTools.Rag

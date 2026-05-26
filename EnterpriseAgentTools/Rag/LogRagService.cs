@@ -25,9 +25,9 @@ namespace CAEAgentTools.Rag
 
             var matches = retrievedResults
                 .Take(maxResults)
-                .Select(result => new LogRagContextItem
+                .Select((result, index) => new LogRagContextItem
                 {
-                    Rank = result.Rank,
+                    Rank = index + 1,
                     Timestamp = result.Timestamp,
                     Area = result.Area,
                     LogLevel = result.LogLevel,

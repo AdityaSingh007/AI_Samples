@@ -1,28 +1,28 @@
-using Azure.AI.OpenAI;
+﻿using Azure.AI.OpenAI;
 using CAEAgentTools.Entity;
 using CAEAgentTools.Rag;
+using CAEAgentTools.VectorStore;
 using EnterpriseAgentTools.VectorMetadata;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.VectorData;
-using Microsoft.SemanticKernel.Connectors.InMemory;
+using Microsoft.SemanticKernel.Connectors.SqliteVec;
 
-namespace CAEAgentTools.VectorStore
+namespace EnterpriseAgentTools.VectorStore
 {
-    public sealed class InMemoryVectorStoreProvider : ILogVectorStore
+    public sealed class SqliteVectorStoreProvider : ILogVectorStore
     {
         private string azureOpenAIApiKey = Environment.GetEnvironmentVariable("Open_AI_Embedding_Model_Token", EnvironmentVariableTarget.User) ?? throw new ArgumentNullException($"Api key {nameof(azureOpenAIApiKey)} is empty");
         private IEmbeddingGenerator embeddingGenerator;
-        private InMemoryVectorStore vectorStore;
-        private InMemoryCollection<string, LogVectorRecord> logCollection;
-        public InMemoryVectorStoreProvider()
+        private SqliteVectorStore sqliteVectorStore;
+        private SqliteCollection<string, LogVectorRecord> logCollection;
+        public SqliteVectorStoreProvider()
         {
             embeddingGenerator = new AzureOpenAIClient(new Uri("https://singhadi041-6488-resource.services.ai.azure.com"),
-                new System.ClientModel.ApiKeyCredential(azureOpenAIApiKey))
-                                     .GetEmbeddingClient("text-embedding-3-small")
-                                     .AsIEmbeddingGenerator();
-
-            vectorStore = new InMemoryVectorStore(new() { EmbeddingGenerator = embeddingGenerator });
-            logCollection = vectorStore.GetCollection<string, LogVectorRecord>("logRecords");
+               new System.ClientModel.ApiKeyCredential(azureOpenAIApiKey))
+                                    .GetEmbeddingClient("text-embedding-3-small")
+                                    .AsIEmbeddingGenerator();
+            sqliteVectorStore = new SqliteVectorStore("Datasource=./Data/logVector.db", new() { EmbeddingGenerator = embeddingGenerator });
+            logCollection = sqliteVectorStore.GetCollection<string, LogVectorRecord>("logRecords");
             logCollection.EnsureCollectionExistsAsync().Wait();
         }
 
@@ -69,6 +69,7 @@ namespace CAEAgentTools.VectorStore
             }
 
             var results = new List<LlmVectorSearchResult>(maxResults);
+
             var searchOptions = new VectorSearchOptions<LogVectorRecord>
             {
                 Filter = record => record.LogTimestamp >= fromDate && record.LogTimestamp <= toDate,
@@ -98,33 +99,5 @@ namespace CAEAgentTools.VectorStore
 
             return results;
         }
-
-        private static string BuildContent(TraceLogEntry log)
-        {
-            return string.Join(' ', new[]
-            {
-                log.Area,
-                log.LogLevel,
-                log.CallSite,
-                log.Message
-            }.Where(value => !string.IsNullOrWhiteSpace(value)));
-        }
-    }
-
-    public sealed class LlmVectorSearchResult
-    {
-        public double? Rank { get; init; }
-
-        public string Query { get; init; } = string.Empty;
-
-        public string Area { get; init; } = string.Empty;
-
-        public DateTime? Timestamp { get; init; }
-
-        public string Content { get; init; } = string.Empty;
-
-        public string LogLevel { get; init; } = string.Empty;
-
-        public string CallSite { get; init; } = string.Empty;
     }
 }
