@@ -75,7 +75,7 @@ namespace EnterpriseAgentTools.VectorStore
                 Filter = record => record.LogTimestamp >= fromDate && record.LogTimestamp <= toDate,
             };
 
-            await foreach (var result in logCollection.SearchAsync(query, top: maxResults, options: searchOptions, cancellationToken: cancellationToken))
+            await foreach (var result in logCollection.SearchAsync(query, top: 1000, options: searchOptions, cancellationToken: cancellationToken))
             {
                 cancellationToken.ThrowIfCancellationRequested();
 

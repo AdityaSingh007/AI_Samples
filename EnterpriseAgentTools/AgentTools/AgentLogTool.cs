@@ -14,7 +14,7 @@ namespace CAEAgentTools.AgentTools
         {
             try
             {
-                var context = await logRagService.RetrieveContextAsync(fromDate, toDate, query, maxResults);
+                var context = await logRagService.RetrieveContextAsync(fromDate, toDate, query, maxResults*1000);
 
                 return JsonSerializer.Serialize(context, new JsonSerializerOptions
                 {

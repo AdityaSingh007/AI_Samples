@@ -7,8 +7,8 @@ namespace CAEAgentTools.Rag
 
         public async Task IngestAsync(CancellationToken cancellationToken = default)
         {
-            var logs = await logRepository.GetAllLogsAsync(cancellationToken);
-            await logVectorStore.IngestAsync(logs, cancellationToken);
+            //var logs = await logRepository.GetAllLogsAsync(cancellationToken);
+            //await logVectorStore.IngestAsync(logs, cancellationToken);
         }
     }
 }
