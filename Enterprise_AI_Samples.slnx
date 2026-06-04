@@ -3,4 +3,5 @@
   <Project Path="EnterpriseAgentTools/EnterpriseAgentTools.csproj" />
   <Project Path="Enterprise_AI_Samples/Enterprise_AI_Samples.csproj" />
   <Project Path="Enterprise_Log_Agent/Enterprise_Log_Agent.csproj" />
+  <Project Path="Enterprise_MAF_Samples/Enterprise_MAF_Samples.csproj" Id="6345e7e8-8159-4c8d-b3aa-105e0dbe9f25" />
 </Solution>
