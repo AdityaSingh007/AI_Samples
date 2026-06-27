@@ -1,6 +1,7 @@
 using Azure.AI.OpenAI;
 using CopiloKit_MAF_Backend_Agent.Models;
 using Microsoft.Agents.AI;
+using Microsoft.Agents.AI.DevUI;
 using Microsoft.Agents.AI.Hosting.AGUI.AspNetCore;
 using Microsoft.Agents.AI.Workflows;
 using Microsoft.Extensions.AI;
@@ -74,6 +75,9 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.MapOpenAIResponses();
+    app.MapOpenAIConversations();
+    app.MapDevUI();
 }
 
 app.UseCors("AllowLocalhostOrigins");
