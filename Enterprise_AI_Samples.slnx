@@ -2,6 +2,7 @@
   <Project Path="AGUI_Console_Client/AGUI_Console_Client.csproj" Id="23086a2d-2ca7-4eba-b8b1-93d818d781c4" />
   <Project Path="EnterpriseAgentTools/EnterpriseAgentTools.csproj" />
   <Project Path="Enterprise_AI_Samples/Enterprise_AI_Samples.csproj" />
+  <Project Path="Enterprise_Api_Sample/Enterprise_Api_Sample.csproj" Id="08905e0e-5d0f-4302-b4ba-235ac6bf7cc3" />
   <Project Path="Enterprise_Log_Agent/Enterprise_Log_Agent.csproj" />
   <Project Path="Enterprise_MAF_Samples/Enterprise_MAF_Samples.csproj" Id="6345e7e8-8159-4c8d-b3aa-105e0dbe9f25" />
 </Solution>
