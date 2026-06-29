@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="AGUI_Console_Client/AGUI_Console_Client.csproj" Id="23086a2d-2ca7-4eba-b8b1-93d818d781c4" />
+  <Project Path="CopiloKit_MAF_Backend_Agent/CopiloKit_MAF_Backend_Agent.csproj" Id="9b257aa2-1f45-4ade-9a19-8067ac75b588" />
   <Project Path="EnterpriseAgentTools/EnterpriseAgentTools.csproj" />
   <Project Path="Enterprise_AI_Samples/Enterprise_AI_Samples.csproj" />
   <Project Path="Enterprise_Api_Sample/Enterprise_Api_Sample.csproj" Id="08905e0e-5d0f-4302-b4ba-235ac6bf7cc3" />
