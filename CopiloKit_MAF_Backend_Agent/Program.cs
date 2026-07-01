@@ -1,12 +1,12 @@
 using Azure.AI.OpenAI;
+using CopiloKit_MAF_Backend_Agent.AgentFactory;
+using CopiloKit_MAF_Backend_Agent.AgentTools;
 using CopiloKit_MAF_Backend_Agent.Models;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.DevUI;
 using Microsoft.Agents.AI.Hosting.AGUI.AspNetCore;
-using Microsoft.Agents.AI.Workflows;
-using Microsoft.Extensions.AI;
 
-const string AgentName = "user-friendly-agent";
+const string AgentName = "human_in_the_loop";
 var builder = WebApplication.CreateBuilder(args);
 
 var gptModelConfiguration = new GptModelConfiguration();
@@ -37,16 +37,11 @@ gptModelConfiguration.ModelToken = gpt_4_1_Token;
 AzureOpenAIClient client = new(new Uri(gptModelConfiguration.FoundryDeploymentUrl),
     new System.ClientModel.ApiKeyCredential(gptModelConfiguration.ModelToken));
 
-AIAgent agent = client
-    .GetChatClient("gpt-4.1-mini")
-    .AsIChatClient()
-    .AsAIAgent(
-    new ChatClientAgentOptions()
-    {
-        Name = AgentName,
-        ChatOptions = new() { Instructions = "You are a friendly assistant." },
-    }
-    );
+var agent = ChatClientAgentFactory.CreateHumanInTheLoop(
+    agentName: AgentName,
+    modelName: "gpt-4.1-mini",
+    client,
+    tripPlannerTool: new AgentCustomTools());
 
 // Register the created agent instance as a singleton service so it can be injected where needed.
 builder.Services.AddSingleton<AIAgent>(agent);
@@ -81,7 +76,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowLocalhostOrigins");
-app.MapAGUI(AgentName, "/");
+app.MapAGUI("/human_in_the_loop", agent);
+
 app.UseHttpsRedirection();
 
 app.Run();

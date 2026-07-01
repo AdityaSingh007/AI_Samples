@@ -11,7 +11,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideCopilotKit({
       selfManagedAgents: {
-        default: new HttpAgent({ url: 'https://localhost:7275/' }),
+        default: new HttpAgent({ url: 'https://localhost:7275/human_in_the_loop' }),
       },
     }),
   ],
