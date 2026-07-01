@@ -1,6 +1,5 @@
 ﻿using CopiloKit_MAF_Backend_Agent.AgentUtils;
 using CopiloKit_MAF_Backend_Agent.Models;
-using Microsoft.Extensions.AI;
 using System.ComponentModel;
 
 namespace CopiloKit_MAF_Backend_Agent.AgentTools

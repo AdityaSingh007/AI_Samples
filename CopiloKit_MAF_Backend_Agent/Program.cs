@@ -49,6 +49,8 @@ builder.Services.AddSingleton<AIAgent>(agent);
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: "AllowLocalhostOrigins",
@@ -73,10 +75,24 @@ if (app.Environment.IsDevelopment())
     app.MapOpenAIResponses();
     app.MapOpenAIConversations();
     app.MapDevUI();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseCors("AllowLocalhostOrigins");
 app.MapAGUI("/human_in_the_loop", agent);
+
+app.MapPost("/api/trips/approval-callback", (TripApprovalCallbackPayload payload) =>
+{
+
+
+    return TypedResults.Ok(new TripApprovalCallbackResponse(
+        Enum.GetName(payload.Decision) ?? string.Empty,
+        payload.Message,
+        payload.Highlights,
+        DateTimeOffset.UtcNow));
+})
+.WithName("TripApprovalCallback");
 
 app.UseHttpsRedirection();
 

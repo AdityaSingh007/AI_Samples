@@ -15,8 +15,8 @@
     }
     <p>{{ message() }}</p>
     <div class="mt-3 flex gap-2">
-      <button type="button" (click)="call.respond('confirmed')">Confirm</button>
-      <button type="button" (click)="call.respond('rejected')">Reject</button>
+      <button type="button" (click)="approve()">Confirm</button>
+      <button type="button" (click)="reject()">Reject</button>
     </div>
   </div>
 }
