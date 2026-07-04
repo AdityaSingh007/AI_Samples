@@ -3,16 +3,6 @@
   <div class="text-sm opacity-70">You chose: {{ call.result }}</div>
 } @else {
   <div class="rounded border p-4">
-    @if (tripHighlights().length > 0) {
-      <div class="trip-highlights">
-        <h4>Trip highlights</h4>
-        <ul>
-          @for (highlight of tripHighlights(); track highlight) {
-            <li>{{ highlight }}</li>
-          }
-        </ul>
-      </div>
-    }
     <p>{{ message() }}</p>
     <div class="mt-3 flex gap-2">
       <button type="button" (click)="approve()">Confirm</button>

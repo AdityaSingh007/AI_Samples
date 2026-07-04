@@ -2,7 +2,7 @@ import { Component, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CopilotChat, registerHumanInTheLoop } from '@copilotkit/angular';
 import { z } from 'zod';
-import { Confirm } from './human-in-the-loop/confirm';
+import { Confirm } from './human-confirmation/confirm';
 
 @Component({
   selector: 'app-root',
@@ -14,16 +14,11 @@ export class App {
   protected readonly title = signal('my-copilot-app');
   constructor() {
     registerHumanInTheLoop({
-      name: 'confirmAction',
-      description: 'Ask the user to confirm before performing a sensitive action',
+      name: 'ConfirmSensitiveAction',
+      description: 'Ask the user to confirm before performing a action.',
       parameters: z.object({
         message: z.string().describe('The confirmation question to show the user'),
-        tripHighlights: z
-          .array(z.string())
-          .optional()
-          .describe(
-            'Optional bullet points summarizing the trip details for review before confirmation',
-          ),
+        isConfirmed: z.boolean().describe('Whether the user has confirmed the action'),
       }),
       component: Confirm,
     });

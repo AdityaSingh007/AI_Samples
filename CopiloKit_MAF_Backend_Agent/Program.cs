@@ -37,11 +37,11 @@ gptModelConfiguration.ModelToken = gpt_4_1_Token;
 AzureOpenAIClient client = new(new Uri(gptModelConfiguration.FoundryDeploymentUrl),
     new System.ClientModel.ApiKeyCredential(gptModelConfiguration.ModelToken));
 
-var agent = ChatClientAgentFactory.CreateHumanInTheLoop(
+var agent = ChatClientAgentFactory.CreateHumanInTheLoopWithMiddleware(
     agentName: AgentName,
     modelName: "gpt-4.1-mini",
     client,
-    tripPlannerTool: new AgentCustomTools());
+    agentCustomTools: new AgentCustomTools());
 
 // Register the created agent instance as a singleton service so it can be injected where needed.
 builder.Services.AddSingleton<AIAgent>(agent);
