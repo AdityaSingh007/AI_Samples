@@ -1,0 +1,28 @@
+@let call = toolCall();
+@if (call.status === 'complete') {
+  <div class="result-text">Submitted username: {{ call.result }}</div>
+} @else {
+  <div class="user-name-card">
+    <h3>Enter Username</h3>
+
+    <label for="user-name-input">Username</label>
+    <input
+      id="user-name-input"
+      type="text"
+      [value]="userName()"
+      (input)="onUserNameInput($event)"
+      placeholder="Type your username"
+      autocomplete="username"
+      [attr.aria-invalid]="hasValidationError()"
+    />
+
+    @if (hasValidationError()) {
+      <p class="error-text">Username is required.</p>
+    }
+
+    <div class="actions">
+      <button type="button" (click)="confirm()">Confirm</button>
+      <button type="button" (click)="cancel()">Cancel</button>
+    </div>
+  </div>
+}

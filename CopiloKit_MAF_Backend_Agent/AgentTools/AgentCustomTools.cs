@@ -17,13 +17,6 @@ namespace CopiloKit_MAF_Backend_Agent.AgentTools
             return $"Email sent to {to} with subject '{subject}'";
         }
 
-        [Description("Process a payment for a donor.")]
-        public async Task<string> ProcessPayment([Description("The name of the donor")] string donor,
-                                                 [Description("The amount to be processed")] decimal amount,
-                                                 [Description("The user action if approved or rejected")] bool isConfirmed)
-        {
-            return $"Payment of {amount:C} processed for {donor}";
-        }
 
         [Description("Generate a random user name with a name provided by the user .")]
         public async Task<string> GenerateRandomUserName([Description("The name of the user")] string name,

@@ -82,18 +82,6 @@ if (app.Environment.IsDevelopment())
 app.UseCors("AllowLocalhostOrigins");
 app.MapAGUI("/human_in_the_loop", agent);
 
-app.MapPost("/api/trips/approval-callback", (TripApprovalCallbackPayload payload) =>
-{
-
-
-    return TypedResults.Ok(new TripApprovalCallbackResponse(
-        Enum.GetName(payload.Decision) ?? string.Empty,
-        payload.Message,
-        payload.Highlights,
-        DateTimeOffset.UtcNow));
-})
-.WithName("TripApprovalCallback");
-
 app.UseHttpsRedirection();
 
 app.Run();

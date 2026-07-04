@@ -3,6 +3,7 @@ import { RouterOutlet } from '@angular/router';
 import { CopilotChat, registerHumanInTheLoop } from '@copilotkit/angular';
 import { z } from 'zod';
 import { Confirm } from './human-confirmation/confirm';
+import { UserNameInput } from './frontend-tools/user-name-input';
 
 @Component({
   selector: 'app-root',
@@ -14,13 +15,14 @@ export class App {
   protected readonly title = signal('my-copilot-app');
   constructor() {
     registerHumanInTheLoop({
-      name: 'ConfirmSensitiveAction',
-      description: 'Ask the user to confirm before performing a action.',
+      name: 'UserNameInput',
+      description:
+        'Ask the user to provide a name when the user asks to generate a random username.',
       parameters: z.object({
-        message: z.string().describe('The confirmation question to show the user'),
+        name: z.string().describe('The name provided by the user to show the user'),
         isConfirmed: z.boolean().describe('Whether the user has confirmed the action'),
       }),
-      component: Confirm,
+      component: UserNameInput,
     });
   }
 }
