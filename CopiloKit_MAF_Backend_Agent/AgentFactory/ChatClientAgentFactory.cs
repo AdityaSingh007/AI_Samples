@@ -1,7 +1,6 @@
 ﻿using Azure.AI.OpenAI;
 using CopiloKit_MAF_Backend_Agent.AgentTools;
 using CopiloKit_MAF_Backend_Agent.AgentUtils;
-using CopiloKit_MAF_Backend_Agent.Models;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using System.Text.Json;
