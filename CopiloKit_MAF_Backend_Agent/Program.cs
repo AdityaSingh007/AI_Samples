@@ -4,6 +4,7 @@ using CopiloKit_MAF_Backend_Agent.AgentTools;
 using CopiloKit_MAF_Backend_Agent.Models;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.DevUI;
+using Microsoft.Agents.AI.Hosting;
 using Microsoft.Agents.AI.Hosting.AGUI.AspNetCore;
 
 const string AgentName = "human_in_the_loop";
@@ -34,14 +35,36 @@ if (string.IsNullOrEmpty(gptModelConfiguration.FoundryDeploymentUrl))
 
 gptModelConfiguration.ModelToken = gpt_4_1_Token;
 
+var foundryProjectEndpoint = builder.Configuration["FOUNDRY_PROJECT_ENDPOINT"];
+var apiKey = builder.Configuration["FOUNDRY_PROJECT_API_KEY"];
+var tenantId = builder.Configuration["TENANT_ID"];
+var clientId = builder.Configuration["CLIENT_ID"];
+var clientSecret = builder.Configuration["CLIENT_SECRET"];
+
+if (string.IsNullOrWhiteSpace(foundryProjectEndpoint) 
+    || string.IsNullOrWhiteSpace(apiKey) 
+    || string.IsNullOrWhiteSpace(tenantId) 
+    || string.IsNullOrWhiteSpace(clientId) 
+    || string.IsNullOrWhiteSpace(clientSecret))
+{
+    Console.WriteLine("Foundry project endpoint, API key, or Azure AD credentials are not configured.");
+    return;
+}
+
 AzureOpenAIClient client = new(new Uri(gptModelConfiguration.FoundryDeploymentUrl),
     new System.ClientModel.ApiKeyCredential(gptModelConfiguration.ModelToken));
 
-var agent = ChatClientAgentFactory.CreateHumanInTheLoopWithMiddleware(
+var agent = await ChatClientAgentFactory.CreateHumanInTheLoopWithMiddleware(
     agentName: AgentName,
     modelName: "gpt-4.1-mini",
     client,
-    agentCustomTools: new AgentCustomTools());
+    agentCustomTools: new AgentCustomTools(),
+    foundryProjectEndpoint: foundryProjectEndpoint,
+    apiKey: apiKey,
+    tenantId: tenantId,
+    clientId: clientId,
+    clientSecret: clientSecret
+);
 
 // Register the created agent instance as a singleton service so it can be injected where needed.
 builder.Services.AddSingleton<AIAgent>(agent);

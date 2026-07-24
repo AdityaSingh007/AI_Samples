@@ -1,18 +1,65 @@
-﻿using Azure.AI.OpenAI;
+﻿using Azure;
+using Azure.AI.OpenAI;
+using Azure.AI.Projects;
+using Azure.AI.Projects.Memory;
+using Azure.Identity;
 using CopiloKit_MAF_Backend_Agent.AgentTools;
 using CopiloKit_MAF_Backend_Agent.AgentUtils;
 using Microsoft.Agents.AI;
+using Microsoft.Agents.AI.Foundry;
 using Microsoft.Extensions.AI;
+using System.ClientModel;
 using System.Text.Json;
 
 namespace CopiloKit_MAF_Backend_Agent.AgentFactory
 {
     internal static class ChatClientAgentFactory
     {
-        public static AIAgent CreateHumanInTheLoopWithMiddleware(string agentName, string modelName,
-            AzureOpenAIClient client, AgentCustomTools agentCustomTools)
+        private const string memoryStoreName = "customer-long-term-vault";
+        private const string deploymentName = "gpt-4.1-mini";
+        private const string embeddingModel = "text-embedding-3-small";
+        private const string chatModelDeployment = "gpt-4.1-mini";
+
+        public static async Task<AIAgent> CreateHumanInTheLoopWithMiddleware(
+            string agentName,
+            string modelName,
+            AzureOpenAIClient client,
+            AgentCustomTools agentCustomTools,
+            string foundryProjectEndpoint = "",
+            string apiKey = "",
+            string tenantId = "",
+            string clientId = "",
+            string clientSecret = ""
+           )
         {
-            var baseAgent = client
+            try
+            {
+                var credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
+                var projectClient = new AIProjectClient
+                                    (
+                                    new Uri(foundryProjectEndpoint),
+                                    tokenProvider: credential
+                                    );
+                MemoryStoreDefaultDefinition memoryStoreDefinition = new(
+                                             chatModel: chatModelDeployment,
+                                             embeddingModel: embeddingModel
+                                             );
+                memoryStoreDefinition.Options = new(isUserProfileEnabled: true, isChatSummaryEnabled: true);
+                //memoryStoreDefinition.Options.UserProfileDetails = "store user preferences";
+                try
+                {
+                    projectClient.MemoryStores.CreateMemoryStore(
+                        name: memoryStoreName,
+                        definition: memoryStoreDefinition,
+                        description: "Memory store for customer support agent");
+                }
+                catch (ClientResultException ex) when (ex.Status == 400)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+
+#pragma warning disable MAAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+                var baseAgent = client
                            .GetChatClient(modelName)
                            .AsIChatClient()
                            .AsAIAgent(
@@ -28,15 +75,31 @@ namespace CopiloKit_MAF_Backend_Agent.AgentFactory
                                                      AIFunctionFactory.Create(agentCustomTools.SendEmail),
                                                  ]
                                            },
+                                           AIContextProviders =
+                                           [
+                                               new FoundryMemoryProvider(
+                                                   projectClient,
+                                                   memoryStoreName,
+                                                   stateInitializer: _ => new(
+                                                       new FoundryMemoryProviderScope($"user001")))
+                                           ]
                                        }
                                        );
+#pragma warning restore MAAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
-            var agent = baseAgent
-                .AsBuilder()
-                .Use(AuditAgentFunctionCalls)
-                .Build();
+                var agent = baseAgent
+                    .AsBuilder()
+                    .Use(AuditAgentFunctionCalls)
+                    .Build();
 
-            return agent;
+                return agent;
+            }
+            finally
+            {
+
+            }
+
+
         }
 
         public static async ValueTask<object?> AuditAgentFunctionCalls(
