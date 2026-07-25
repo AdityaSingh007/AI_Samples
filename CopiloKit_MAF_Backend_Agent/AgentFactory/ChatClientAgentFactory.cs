@@ -5,9 +5,12 @@ using Azure.AI.Projects.Memory;
 using Azure.Identity;
 using CopiloKit_MAF_Backend_Agent.AgentTools;
 using CopiloKit_MAF_Backend_Agent.AgentUtils;
+using CopiloKit_MAF_Backend_Agent.Contracts;
 using Microsoft.Agents.AI;
+using Microsoft.Agents.AI.Compaction;
 using Microsoft.Agents.AI.Foundry;
 using Microsoft.Extensions.AI;
+using OpenAI.Chat;
 using System.ClientModel;
 using System.Text.Json;
 
@@ -19,6 +22,46 @@ namespace CopiloKit_MAF_Backend_Agent.AgentFactory
         private const string deploymentName = "gpt-4.1-mini";
         private const string embeddingModel = "text-embedding-3-small";
         private const string chatModelDeployment = "gpt-4.1-mini";
+
+        public static async Task<AIAgent> CreateAgentWithMemory(
+            string agentName,
+            string modelName,
+            AzureOpenAIClient client,
+            IAgentCosmosChatHistoryProvider agentCosmosChatHistoryProvider
+           )
+        {
+            var cosmosChatHistoryProvider = await agentCosmosChatHistoryProvider.GetCosmosChatHistoryProviderAsync();
+#pragma warning disable MAAI001
+            var compactionStrategy = new SummarizationCompactionStrategy(
+                chatClient: client.GetChatClient(modelName).AsIChatClient(),
+                trigger: CompactionTriggers.MessagesExceed(8)
+                );
+            var compactionProvider = new CompactionProvider(compactionStrategy);
+#pragma warning restore MAAI001
+            var baseAgent = client
+                           .GetChatClient(modelName)
+                           .AsIChatClient()
+                           .AsAIAgent(
+                                       new ChatClientAgentOptions
+                                       {
+                                           Name = "PersonalAssistant",
+                                           ChatOptions = new()
+                                           {
+                                               ModelId = "gpt-4.1-mini",
+                                               Instructions = "You are a helpful assistant. Use known memories about the user. Always address the user by his/her name.",
+                                           },
+                                           ChatHistoryProvider = cosmosChatHistoryProvider,
+                                           AIContextProviders = [compactionProvider]
+                                       }
+                                       );
+#pragma warning restore MAAI001
+
+            var agent = baseAgent
+                .AsBuilder()
+                .Build();
+
+            return agent;
+        }
 
         public static async Task<AIAgent> CreateHumanInTheLoopWithMiddleware(
             string agentName,

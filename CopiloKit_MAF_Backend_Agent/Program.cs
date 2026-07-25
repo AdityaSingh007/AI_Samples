@@ -1,6 +1,8 @@
 using Azure.AI.OpenAI;
 using CopiloKit_MAF_Backend_Agent.AgentFactory;
 using CopiloKit_MAF_Backend_Agent.AgentTools;
+using CopiloKit_MAF_Backend_Agent.ContextHistoryProvider;
+using CopiloKit_MAF_Backend_Agent.Contracts;
 using CopiloKit_MAF_Backend_Agent.Models;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.DevUI;
@@ -54,6 +56,8 @@ if (string.IsNullOrWhiteSpace(foundryProjectEndpoint)
 AzureOpenAIClient client = new(new Uri(gptModelConfiguration.FoundryDeploymentUrl),
     new System.ClientModel.ApiKeyCredential(gptModelConfiguration.ModelToken));
 
+builder.Services.AddSingleton<IAgentCosmosChatHistoryProvider, AgentCosmosChatHistoryProvider>();
+
 var agent = await ChatClientAgentFactory.CreateHumanInTheLoopWithMiddleware(
     agentName: AgentName,
     modelName: "gpt-4.1-mini",
@@ -66,8 +70,16 @@ var agent = await ChatClientAgentFactory.CreateHumanInTheLoopWithMiddleware(
     clientSecret: clientSecret
 );
 
+var agentWithMemory = await ChatClientAgentFactory.CreateAgentWithMemory(
+    agentName: AgentName,
+    modelName: "gpt-4.1-mini",
+    client,
+    new AgentCosmosChatHistoryProvider(builder.Configuration)
+);
+
 // Register the created agent instance as a singleton service so it can be injected where needed.
 builder.Services.AddSingleton<AIAgent>(agent);
+builder.Services.AddSingleton(agentWithMemory);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -103,7 +115,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowLocalhostOrigins");
-app.MapAGUI("/human_in_the_loop", agent);
+app.MapAGUI("/human_in_the_loop", agentWithMemory);
 
 app.UseHttpsRedirection();
 
