@@ -58,17 +58,17 @@ AzureOpenAIClient client = new(new Uri(gptModelConfiguration.FoundryDeploymentUr
 
 builder.Services.AddSingleton<IAgentCosmosChatHistoryProvider, AgentCosmosChatHistoryProvider>();
 
-var agent = await ChatClientAgentFactory.CreateHumanInTheLoopWithMiddleware(
-    agentName: AgentName,
-    modelName: "gpt-4.1-mini",
-    client,
-    agentCustomTools: new AgentCustomTools(),
-    foundryProjectEndpoint: foundryProjectEndpoint,
-    apiKey: apiKey,
-    tenantId: tenantId,
-    clientId: clientId,
-    clientSecret: clientSecret
-);
+//var agent = await ChatClientAgentFactory.CreateHumanInTheLoopWithMiddleware(
+//    agentName: AgentName,
+//    modelName: "gpt-4.1-mini",
+//    client,
+//    agentCustomTools: new AgentCustomTools(),
+//    foundryProjectEndpoint: foundryProjectEndpoint,
+//    apiKey: apiKey,
+//    tenantId: tenantId,
+//    clientId: clientId,
+//    clientSecret: clientSecret
+//);
 
 var agentWithMemory = await ChatClientAgentFactory.CreateAgentWithMemory(
     agentName: AgentName,
@@ -78,7 +78,7 @@ var agentWithMemory = await ChatClientAgentFactory.CreateAgentWithMemory(
 );
 
 // Register the created agent instance as a singleton service so it can be injected where needed.
-builder.Services.AddSingleton<AIAgent>(agent);
+//builder.Services.AddSingleton<AIAgent>(agent);
 builder.Services.AddSingleton(agentWithMemory);
 
 // Add services to the container.
