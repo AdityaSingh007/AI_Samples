@@ -13,7 +13,6 @@ export const appConfig: ApplicationConfig = {
       selfManagedAgents: {
         default: new HttpAgent({
           url: 'https://localhost:7275/human_in_the_loop',
-          //headers: { 'x-memory-user-id': 'userId-123' },
         }),
       },
     }),

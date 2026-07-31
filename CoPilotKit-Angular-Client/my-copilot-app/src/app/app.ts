@@ -7,7 +7,7 @@ import { UserNameInput } from './frontend-tools/user-name-input';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, CopilotChat],
+  imports: [RouterOutlet, CopilotChat, UserNameInput],
   templateUrl: './app.html',
   styleUrls: ['./app.scss'],
 })

@@ -4,7 +4,9 @@ using CopiloKit_MAF_Backend_Agent.AgentTools;
 using CopiloKit_MAF_Backend_Agent.ContextHistoryProvider;
 using CopiloKit_MAF_Backend_Agent.Contracts;
 using CopiloKit_MAF_Backend_Agent.Models;
+using CopiloKit_MAF_Backend_Agent.Services;
 using Microsoft.Agents.AI;
+using Microsoft.Azure.Cosmos;
 using Microsoft.Agents.AI.DevUI;
 using Microsoft.Agents.AI.Hosting;
 using Microsoft.Agents.AI.Hosting.AGUI.AspNetCore;
@@ -70,11 +72,23 @@ builder.Services.AddSingleton<IAgentCosmosChatHistoryProvider, AgentCosmosChatHi
 //    clientSecret: clientSecret
 //);
 
+var cosmosEndpoint = builder.Configuration["COSMOS_ENDPOINT"] ?? throw new InvalidOperationException("COSMOS_ENDPOINT is not configured.");
+var cosmosKey = builder.Configuration["COSMOS_KEY"] ?? throw new InvalidOperationException("COSMOS_KEY is not configured.");
+var semanticCacheDatabase = builder.Configuration["SEMANTIC_CACHE_DATABASE"] ?? "CosmosDBForMyAIAgent";
+var semanticCacheContainer = builder.Configuration["SEMANTIC_CACHE_CONTAINER"] ?? "cache";
+
+var semanticCacheService = new SemanticCacheService(
+    new CosmosClient(cosmosEndpoint, cosmosKey, new CosmosClientOptions { ConnectionMode = ConnectionMode.Gateway }),
+    semanticCacheDatabase,
+    semanticCacheContainer,
+    client);
+
 var agentWithMemory = await ChatClientAgentFactory.CreateAgentWithMemory(
     agentName: AgentName,
     modelName: "gpt-4.1-mini",
     client,
-    new AgentCosmosChatHistoryProvider(builder.Configuration)
+    new AgentCosmosChatHistoryProvider(builder.Configuration),
+    semanticCacheService
 );
 
 // Register the created agent instance as a singleton service so it can be injected where needed.

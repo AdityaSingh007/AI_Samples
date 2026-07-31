@@ -12,6 +12,7 @@ using Microsoft.Agents.AI.Foundry;
 using Microsoft.Extensions.AI;
 using OpenAI.Chat;
 using System.ClientModel;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 
 namespace CopiloKit_MAF_Backend_Agent.AgentFactory
@@ -27,7 +28,8 @@ namespace CopiloKit_MAF_Backend_Agent.AgentFactory
             string agentName,
             string modelName,
             AzureOpenAIClient client,
-            IAgentCosmosChatHistoryProvider agentCosmosChatHistoryProvider
+            IAgentCosmosChatHistoryProvider agentCosmosChatHistoryProvider,
+            ISemanticCacheService semanticCacheService
            )
         {
             var cosmosChatHistoryProvider = await agentCosmosChatHistoryProvider.GetCosmosChatHistoryProviderAsync();
@@ -58,6 +60,10 @@ namespace CopiloKit_MAF_Backend_Agent.AgentFactory
 
             var agent = baseAgent
                 .AsBuilder()
+                .Use(
+                    runFunc: (messages, session, options, innerAgent, cancellationToken) =>
+                        CustomAgentRunStreamingMiddleware(messages, session, options, innerAgent, semanticCacheService, cancellationToken),
+                    runStreamingFunc: null)
                 .Build();
 
             return agent;
@@ -143,6 +149,54 @@ namespace CopiloKit_MAF_Backend_Agent.AgentFactory
             }
 
 
+        }
+
+        private static async Task<AgentResponse> CustomAgentRunStreamingMiddleware
+        (
+        IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages,
+        AgentSession? session,
+        AgentRunOptions? options,
+        AIAgent innerAgent,
+        ISemanticCacheService semanticCacheService,
+        CancellationToken cancellationToken
+        )
+        {
+            Console.WriteLine($"Executing middleware:- {messages.Count()}");
+
+            var userPrompt = messages
+                .LastOrDefault(m => m.Role == Microsoft.Extensions.AI.ChatRole.User)
+                ?.Text;
+
+            if (!string.IsNullOrWhiteSpace(userPrompt))
+            {
+                var cachedResponse = await semanticCacheService.GetCachedResponseAsync(userPrompt);
+                if (!string.IsNullOrWhiteSpace(cachedResponse))
+                {
+                    return new AgentResponse
+                    {
+                        Messages =
+                        [
+                            new Microsoft.Extensions.AI.ChatMessage(Microsoft.Extensions.AI.ChatRole.Assistant, cachedResponse)
+                        ]
+                    };
+                }
+            }
+
+            var llmResponse = await innerAgent.RunAsync(messages, session, options, cancellationToken);
+
+            if (!string.IsNullOrWhiteSpace(userPrompt))
+            {
+                var assistantResponse = llmResponse.Messages
+                    .LastOrDefault(m => m.Role == Microsoft.Extensions.AI.ChatRole.Assistant)
+                    ?.Text;
+
+                if (!string.IsNullOrWhiteSpace(assistantResponse))
+                {
+                    await semanticCacheService.CacheResponseAsync(userPrompt, assistantResponse);
+                }
+            }
+
+            return llmResponse;
         }
 
         public static async ValueTask<object?> AuditAgentFunctionCalls(
