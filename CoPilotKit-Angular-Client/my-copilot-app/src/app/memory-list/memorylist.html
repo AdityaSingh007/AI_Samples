@@ -1,0 +1,26 @@
+<div class="memory-container">
+  <h2>Agent Memories</h2>
+
+  <!-- 1. Verify if the memory persistence engine is active for this route -->
+  @if (!memory.isAvailable()) {
+    <p class="error-msg">
+      Memory storage is unavailable for this self-managed runtime configuration.
+    </p>
+  } @else {
+    <!-- 2. Loop through reactive signal entries -->
+    <div class="memory-list">
+      @for (item of memory.memories(); track item.id) {
+        <div class="memory-card">
+          <p class="memory-text">{{ item.content }}</p>
+
+          <!-- 3. Optional: Allow users to delete specific memory snippets -->
+          <button type="button" class="forget-btn" (click)="memory.removeMemory(item.id)">
+            Forget This
+          </button>
+        </div>
+      } @empty {
+        <p class="empty-msg">No memories recorded yet by the agent.</p>
+      }
+    </div>
+  }
+</div>

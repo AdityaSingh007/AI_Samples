@@ -6,9 +6,11 @@ using Azure.Identity;
 using CopiloKit_MAF_Backend_Agent.AgentTools;
 using CopiloKit_MAF_Backend_Agent.AgentUtils;
 using CopiloKit_MAF_Backend_Agent.Contracts;
+using CopiloKit_MAF_Backend_Agent.Models;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Compaction;
 using Microsoft.Agents.AI.Foundry;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.AI;
 using OpenAI.Chat;
 using System.ClientModel;
@@ -19,11 +21,14 @@ namespace CopiloKit_MAF_Backend_Agent.AgentFactory
 {
     internal static class ChatClientAgentFactory
     {
+        #region Constants
         private const string memoryStoreName = "customer-long-term-vault";
         private const string deploymentName = "gpt-4.1-mini";
         private const string embeddingModel = "text-embedding-3-small";
         private const string chatModelDeployment = "gpt-4.1-mini";
+        #endregion
 
+        #region Agents
         public static async Task<AIAgent> CreateAgentWithMemory(
             string agentName,
             string modelName,
@@ -50,10 +55,12 @@ namespace CopiloKit_MAF_Backend_Agent.AgentFactory
                                            ChatOptions = new()
                                            {
                                                ModelId = "gpt-4.1-mini",
-                                               Instructions = "You are a helpful assistant. Use known memories about the user. Always address the user by his/her name.",
+                                               Instructions = @"You are an personal assistant. Always address the user by his/her name.",
+                                               //Tools = [AIFunctionFactory.Create(AgentCustomTools.RecallMemory, options: new() { Name = "recall_memory" })]
                                            },
                                            ChatHistoryProvider = cosmosChatHistoryProvider,
-                                           AIContextProviders = [compactionProvider]
+                                           AIContextProviders = [compactionProvider],
+
                                        }
                                        );
 #pragma warning restore MAAI001
@@ -62,7 +69,8 @@ namespace CopiloKit_MAF_Backend_Agent.AgentFactory
                 .AsBuilder()
                 .Use(
                     runFunc: (messages, session, options, innerAgent, cancellationToken) =>
-                        CustomAgentRunStreamingMiddleware(messages, session, options, innerAgent, semanticCacheService, cancellationToken),
+                        CustomAgentRunStreamingMiddleware(messages, session, options,
+                        innerAgent, client, semanticCacheService, cancellationToken),
                     runStreamingFunc: null)
                 .Build();
 
@@ -151,12 +159,36 @@ namespace CopiloKit_MAF_Backend_Agent.AgentFactory
 
         }
 
+        public static async Task<AIAgent> CreateResposneAnanlysisAgent(
+            AzureOpenAIClient client,
+            AgentCustomTools? agentCustomTools
+           )
+        {
+            var baseAgent = client
+                           .GetChatClient(chatModelDeployment)
+                           .AsIChatClient()
+                           .AsAIAgent(new ChatClientAgentOptions()
+                           {
+                               Name = "AgentResponseAnalysis",
+                               ChatOptions = new()
+                               {
+                                   Instructions = AgentInstruction.AgentResponseAnalysisInstruction,
+                                   ResponseFormat = Microsoft.Extensions.AI.ChatResponseFormat.ForJsonSchema<EvaluationResult>()
+                               },
+                           });
+
+            return baseAgent;
+        }
+        #endregion
+
+        #region Middlewares
         private static async Task<AgentResponse> CustomAgentRunStreamingMiddleware
         (
         IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages,
         AgentSession? session,
         AgentRunOptions? options,
         AIAgent innerAgent,
+        AzureOpenAIClient azureOpenAIClient,
         ISemanticCacheService semanticCacheService,
         CancellationToken cancellationToken
         )
@@ -187,12 +219,28 @@ namespace CopiloKit_MAF_Backend_Agent.AgentFactory
             if (!string.IsNullOrWhiteSpace(userPrompt))
             {
                 var assistantResponse = llmResponse.Messages
-                    .LastOrDefault(m => m.Role == Microsoft.Extensions.AI.ChatRole.Assistant)
-                    ?.Text;
+                    .Where(m => m.Role == Microsoft.Extensions.AI.ChatRole.Assistant)
+                    .Select(m => m.Text!.Trim())
+                    .FirstOrDefault();
 
                 if (!string.IsNullOrWhiteSpace(assistantResponse))
                 {
-                    await semanticCacheService.CacheResponseAsync(userPrompt, assistantResponse);
+                    var evaluationAgent = await CreateResposneAnanlysisAgent(azureOpenAIClient, null);
+                    string evaluationPrompt = $"""
+                           User Prompt: {userPrompt}
+                           Agent Response to Evaluate: {assistantResponse}
+                           """;
+                    AgentResponse respone = await evaluationAgent.RunAsync<EvaluationResult>(evaluationPrompt);
+                    var finalMessage = respone.Messages[^1];
+                    var evaluationResult = System.Text.Json.JsonSerializer.Deserialize<EvaluationResult>(finalMessage.Text, new JsonSerializerOptions()
+                    {
+                        PropertyNameCaseInsensitive = true
+                    }) ?? new EvaluationResult { IsAnswer = false, Reasoning = "Failed to parse evaluation response." };
+                    if (evaluationResult.IsAnswer)
+                    {
+                        await semanticCacheService.CacheResponseAsync(userPrompt, assistantResponse);
+                    }
+
                 }
             }
 
@@ -238,7 +286,9 @@ namespace CopiloKit_MAF_Backend_Agent.AgentFactory
                 throw;
             }
         }
+        #endregion
 
+        #region Private Helper Methods
         private static bool TryGetBooleanArgument(FunctionInvocationContext context, string argumentName, out bool value)
         {
             if (context.Arguments.TryGetValue(argumentName, out var rawValue))
@@ -274,5 +324,7 @@ namespace CopiloKit_MAF_Backend_Agent.AgentFactory
                 _ => rawValue.ToString() ?? string.Empty
             };
         }
+
+        #endregion
     }
 }
