@@ -24,24 +24,5 @@ namespace CopiloKit_MAF_Backend_Agent.AgentTools
         {
             return $"{name} - {Guid.NewGuid()}";
         }
-
-        // 1. Define a tool method that simulates fetching from a Vector/Semantic DB
-        [Description("Recalls and fetches historical memories stored for the active user session.")]
-        public static async Task<AgentUserMemory[]> RecallMemory([Description("The context or keyword query to search within memory")] string query)
-        {
-            return new AgentUserMemory[]
-            {
-                new AgentUserMemory()
-            {
-                    Scope="user",
-                    Content="My name is Aditya"
-            },
-                new AgentUserMemory()
-                {
-                    Scope="user",
-                    Content="I like ice creams"
-                }
-            };
-        }
     }
 }

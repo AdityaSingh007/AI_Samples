@@ -56,10 +56,9 @@ namespace CopiloKit_MAF_Backend_Agent.AgentFactory
                                            {
                                                ModelId = "gpt-4.1-mini",
                                                Instructions = @"You are an personal assistant. Always address the user by his/her name.",
-                                               //Tools = [AIFunctionFactory.Create(AgentCustomTools.RecallMemory, options: new() { Name = "recall_memory" })]
                                            },
                                            ChatHistoryProvider = cosmosChatHistoryProvider,
-                                           AIContextProviders = [compactionProvider],
+                                           AIContextProviders = [compactionProvider]
 
                                        }
                                        );
@@ -193,11 +192,16 @@ namespace CopiloKit_MAF_Backend_Agent.AgentFactory
         CancellationToken cancellationToken
         )
         {
-            Console.WriteLine($"Executing middleware:- {messages.Count()}");
-
             var userPrompt = messages
                 .LastOrDefault(m => m.Role == Microsoft.Extensions.AI.ChatRole.User)
                 ?.Text;
+
+            var chatOptions = options as ChatClientAgentRunOptions;
+            if (chatOptions?.ChatOptions?.AdditionalProperties?.TryGetValue("ag_ui_state", out var rawState) == true)
+            {
+                // 2. The rawState is typically a JsonElement or string containing your structured JSON
+                string jsonState = rawState?.ToString() ?? string.Empty;
+            }
 
             if (!string.IsNullOrWhiteSpace(userPrompt))
             {
@@ -209,13 +213,12 @@ namespace CopiloKit_MAF_Backend_Agent.AgentFactory
                         Messages =
                         [
                             new Microsoft.Extensions.AI.ChatMessage(Microsoft.Extensions.AI.ChatRole.Assistant, cachedResponse)
-                        ]
+                        ],
                     };
                 }
             }
 
             var llmResponse = await innerAgent.RunAsync(messages, session, options, cancellationToken);
-
             if (!string.IsNullOrWhiteSpace(userPrompt))
             {
                 var assistantResponse = llmResponse.Messages
@@ -225,6 +228,10 @@ namespace CopiloKit_MAF_Backend_Agent.AgentFactory
 
                 if (!string.IsNullOrWhiteSpace(assistantResponse))
                 {
+                    var messageContents = new List<AIContent>();
+                    var responseContent = new TextContent(assistantResponse);
+                    messageContents.Add(responseContent);
+
                     var evaluationAgent = await CreateResposneAnanlysisAgent(azureOpenAIClient, null);
                     string evaluationPrompt = $"""
                            User Prompt: {userPrompt}
@@ -235,11 +242,39 @@ namespace CopiloKit_MAF_Backend_Agent.AgentFactory
                     var evaluationResult = System.Text.Json.JsonSerializer.Deserialize<EvaluationResult>(finalMessage.Text, new JsonSerializerOptions()
                     {
                         PropertyNameCaseInsensitive = true
-                    }) ?? new EvaluationResult { IsAnswer = false, Reasoning = "Failed to parse evaluation response." };
+                    }) ?? new EvaluationResult { IsResponseUserPreferenceOrInformation = false, IsAnswer = false, ResponseSummary = "Failed to parse evaluation response." };
+
+                    if (evaluationResult.IsResponseUserPreferenceOrInformation) 
+                    {
+                        var stateUpdatePayload = JsonSerializer.SerializeToUtf8Bytes(new AgentUserMemory()
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            Content = evaluationResult.ResponseSummary,
+                            Kind = "User-Memory",
+                            Scope = "User",
+                            SourceThreadIds = [(chatOptions?.ChatOptions?.AdditionalProperties?.TryGetValue("ag_ui_thread_id", out object? threadId) ?? false) ?
+                        threadId?.ToString() ?? string.Empty : string.Empty]
+                        }, new JsonSerializerOptions()
+                        {
+                            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                        });
+                        var stateUpdateItem = new DataContent(stateUpdatePayload, "application/json");
+                        messageContents.Add(stateUpdateItem);
+                    }
+
                     if (evaluationResult.IsAnswer)
                     {
+                        Console.WriteLine($"[{DateTime.UtcNow:HH:mm:ss}] Caching response for prompt: '{userPrompt}'", ConsoleColor.Cyan);
                         await semanticCacheService.CacheResponseAsync(userPrompt, assistantResponse);
                     }
+
+                    return new AgentResponse
+                    {
+                        Messages =
+                        [
+                            new Microsoft.Extensions.AI.ChatMessage(Microsoft.Extensions.AI.ChatRole.Assistant, messageContents)
+                        ],
+                    };
 
                 }
             }

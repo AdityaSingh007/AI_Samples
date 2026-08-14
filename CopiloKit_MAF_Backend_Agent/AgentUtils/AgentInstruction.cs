@@ -6,6 +6,7 @@
                             "Whenever user asks to generate a random user name use tool GenerateRandomUserName";
 
         public const string AgentResponseAnalysisInstruction = "You are a strict supervisor. Your job is to analyze an agent's response to a user prompt and determine if it provided an answer, or if the agent is requesting more information to answer the question. " +
-                            "The answer does not have to be explicit or definitive in nature.";
+                            "The answer does not have to be explicit or definitive in nature. " +
+                            "Also generate a brief summary of the response and determine if it's a user preference or not.";
     }
 }

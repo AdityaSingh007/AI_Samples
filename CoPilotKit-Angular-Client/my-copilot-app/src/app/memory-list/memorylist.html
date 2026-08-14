@@ -1,26 +1,29 @@
 <div class="memory-container">
-  <h2>Agent Memories</h2>
+  <h3>🧠 Agent Working Memory</h3>
 
-  <!-- 1. Verify if the memory persistence engine is active for this route -->
-  @if (!memory.isAvailable()) {
-    <p class="error-msg">
-      Memory storage is unavailable for this self-managed runtime configuration.
-    </p>
-  } @else {
-    <!-- 2. Loop through reactive signal entries -->
-    <div class="memory-list">
-      @for (item of memory.memories(); track item.id) {
-        <div class="memory-card">
-          <p class="memory-text">{{ item.content }}</p>
-
-          <!-- 3. Optional: Allow users to delete specific memory snippets -->
-          <button type="button" class="forget-btn" (click)="memory.removeMemory(item.id)">
-            Forget This
-          </button>
-        </div>
-      } @empty {
-        <p class="empty-msg">No memories recorded yet by the agent.</p>
-      }
+  <!-- Agent Status Section -->
+  <div class="agent-status">
+    <div class="status-row">
+      <div class="status-content">
+        <span class="status-label">Status:</span>
+        <span class="status-value" [class.running]="isAgentWorking()">
+          <span class="status-emoji">{{ isAgentWorking() ? '⚙️' : '✅' }}</span>
+          {{ isAgentWorking() ? 'Running' : 'Idle' }}
+        </span>
+      </div>
+      <button class="btn-add-state" (click)="addAgentState()" [disabled]="isAgentWorking()">
+        <span class="btn-icon">➕</span> Add State
+      </button>
     </div>
+  </div>
+
+  <!-- Show a loader while the agent mutates state or processes a step -->
+  @if (isAgentWorking()) {
+    <div class="status-indicator">Agent is updating memory...</div>
   }
+
+  <!-- Agent Memory Display -->
+  <div class="memory-card">
+    <pre class="memory-content">{{ agentMemory().content }}</pre>
+  </div>
 </div>

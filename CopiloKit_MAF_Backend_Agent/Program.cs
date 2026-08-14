@@ -10,6 +10,7 @@ using Microsoft.Azure.Cosmos;
 using Microsoft.Agents.AI.DevUI;
 using Microsoft.Agents.AI.Hosting;
 using Microsoft.Agents.AI.Hosting.AGUI.AspNetCore;
+using Microsoft.Agents.AI.AGUI;
 
 const string AgentName = "human_in_the_loop";
 var builder = WebApplication.CreateBuilder(args);
