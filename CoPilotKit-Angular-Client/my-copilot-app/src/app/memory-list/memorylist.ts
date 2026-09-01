@@ -1,5 +1,6 @@
 import { Component, computed, effect, signal } from '@angular/core';
 import { JsonPipe, CommonModule } from '@angular/common';
+import { injectMemories } from '@copilotkit/angular';
 import { injectAgentStore } from '@copilotkit/angular';
 import { AgentMemory } from '../models/agent-memory';
 
@@ -10,6 +11,8 @@ import { AgentMemory } from '../models/agent-memory';
   styleUrls: ['./memorylist.scss'],
 })
 export class Memorylist {
+  readonly memory = injectMemories();
+
   // Inject the store using your registered agent identifier
   readonly agentStore = injectAgentStore('default');
 

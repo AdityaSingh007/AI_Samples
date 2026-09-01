@@ -10,6 +10,9 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideCopilotKit({
       runtimeUrl: 'http://127.0.0.1:8200/api/copilotkit',
+      properties: {
+        userId: 'user_123abc',
+      },
     }),
   ],
 };

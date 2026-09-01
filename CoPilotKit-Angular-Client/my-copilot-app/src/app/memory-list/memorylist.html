@@ -24,6 +24,16 @@
 
   <!-- Agent Memory Display -->
   <div class="memory-card">
-    <pre class="memory-content">{{ agentMemory().content }}</pre>
+    <!-- <pre class="memory-content">{{ agentMemory().content }}</pre> -->
+    @if (!memory.isAvailable()) {
+      <p>Memory is not available for this runtime.</p>
+    } @else {
+      @for (item of memory.memories(); track item.id) {
+        <article>
+          <p>{{ item.content }}</p>
+          <!-- <button type="button" (click)="remove(item.id)">Forget</button> -->
+        </article>
+      }
+    }
   </div>
 </div>

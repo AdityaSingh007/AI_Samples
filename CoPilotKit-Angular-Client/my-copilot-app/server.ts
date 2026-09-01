@@ -1,13 +1,26 @@
 import { createServer } from 'node:http';
-import { CopilotRuntime } from '@copilotkit/runtime/v2';
+import { CopilotKitIntelligence, CopilotRuntime } from '@copilotkit/runtime/v2';
 import { createCopilotNodeListener } from '@copilotkit/runtime/v2/node';
 import { HttpAgent } from '@ag-ui/client';
 
 const runtime = new CopilotRuntime({
   agents: {
     default: new HttpAgent({ url: 'https://localhost:7275/human_in_the_loop' }),
-    'agent-with-memory': new HttpAgent({ url: 'https://localhost:7275/human_in_the_loop' }),
   },
+  /* intelligence: new CopilotKitIntelligence({
+    apiKey: process.env['COPILOTKIT_API_KEY'] ?? '',
+  }),
+  identifyUser: async (request) => ({
+    id: request.headers.get('x-user-id') ?? 'user-123',
+    name: request.headers.get('x-user-name') ?? 'Local Development User',
+  }), */
+  /* memory: {
+    access: async () => ({
+      user: 'read-write',
+      project: 'none',
+    }),
+  }, */
+  //exposeMemoryRoutes: true,
 });
 
 const port = Number(process.env['PORT'] ?? 8200);

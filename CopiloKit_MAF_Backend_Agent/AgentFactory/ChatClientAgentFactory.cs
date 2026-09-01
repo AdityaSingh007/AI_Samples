@@ -2,6 +2,7 @@
 using Azure.AI.OpenAI;
 using Azure.AI.Projects;
 using Azure.AI.Projects.Memory;
+using Azure.Core;
 using Azure.Identity;
 using CopiloKit_MAF_Backend_Agent.AgentTools;
 using CopiloKit_MAF_Backend_Agent.AgentUtils;
@@ -203,6 +204,11 @@ namespace CopiloKit_MAF_Backend_Agent.AgentFactory
                 string jsonState = rawState?.ToString() ?? string.Empty;
             }
 
+            if (chatOptions?.ChatOptions?.AdditionalProperties?.TryGetValue("ag_ui_forwarded_properties", out var forwadedProperties)==true) 
+            {
+                string jsonState = forwadedProperties?.ToString() ?? string.Empty;
+            }
+
             if (!string.IsNullOrWhiteSpace(userPrompt))
             {
                 var cachedResponse = await semanticCacheService.GetCachedResponseAsync(userPrompt);
@@ -244,15 +250,16 @@ namespace CopiloKit_MAF_Backend_Agent.AgentFactory
                         PropertyNameCaseInsensitive = true
                     }) ?? new EvaluationResult { IsResponseUserPreferenceOrInformation = false, IsAnswer = false, ResponseSummary = "Failed to parse evaluation response." };
 
-                    if (evaluationResult.IsResponseUserPreferenceOrInformation) 
+                    if (evaluationResult.IsResponseUserPreferenceOrInformation)
                     {
+                        var threadId = string.Empty;
                         var stateUpdatePayload = JsonSerializer.SerializeToUtf8Bytes(new AgentUserMemory()
                         {
                             Id = Guid.NewGuid().ToString(),
                             Content = evaluationResult.ResponseSummary,
                             Kind = "User-Memory",
                             Scope = "User",
-                            SourceThreadIds = [(chatOptions?.ChatOptions?.AdditionalProperties?.TryGetValue("ag_ui_thread_id", out object? threadId) ?? false) ?
+                            SourceThreadIds = [(chatOptions?.ChatOptions?.AdditionalProperties?.TryGetValue("ag_ui_thread_id", out threadId) ?? false) ?
                         threadId?.ToString() ?? string.Empty : string.Empty]
                         }, new JsonSerializerOptions()
                         {
@@ -260,6 +267,8 @@ namespace CopiloKit_MAF_Backend_Agent.AgentFactory
                         });
                         var stateUpdateItem = new DataContent(stateUpdatePayload, "application/json");
                         messageContents.Add(stateUpdateItem);
+
+                        //await AddUserMemory(Guid.NewGuid().ToString(), evaluationResult.ResponseSummary, new[] { threadId?.ToString() ?? string.Empty });
                     }
 
                     if (evaluationResult.IsAnswer)
@@ -358,6 +367,32 @@ namespace CopiloKit_MAF_Backend_Agent.AgentFactory
                 JsonElement { ValueKind: JsonValueKind.String } jsonValue => jsonValue.GetString() ?? string.Empty,
                 _ => rawValue.ToString() ?? string.Empty
             };
+        }
+
+        private static async Task AddUserMemory(string memoryId, string content, string[] sourceThreadIds)
+        {
+            try
+            {
+                var request = new CreateMemoryRequest(
+                                   Content: content,
+                                   Kind: "user-memory",
+                                   Scope: "user",
+                                   SourceThreadIds: sourceThreadIds);
+
+                var httpClient = new HttpClient();
+                httpClient.BaseAddress = new Uri("http://localhost:8200/");
+
+                using var response = await httpClient.PostAsJsonAsync(
+                $"api/copilotkit/memories/{memoryId}", request);
+
+                response.EnsureSuccessStatusCode();
+
+                await response.Content.ReadFromJsonAsync<MemoryResponse>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
         }
 
         #endregion
