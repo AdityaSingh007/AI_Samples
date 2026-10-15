@@ -2,7 +2,7 @@
 using CAE_AI_Samples.AITools;
 using CAE_AI_Samples.Executors;
 using CAE_AI_Samples.Models;
-using GitHub.Copilot.SDK;
+using GitHub.Copilot;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.GitHub.Copilot;
 using Microsoft.Agents.AI.Workflows;
@@ -35,104 +35,144 @@ var memoryCache = serviceProvider.GetRequiredService<IMemoryCache>();
 string apiHealthCheckUrl = "CaeSystem/health-check";
 
 using var httpClient = serviceProvider.GetRequiredService<IHttpClientFactory>().CreateClient("cae_api_client");
-
-PrintStartupChecklist();
+//**UNCOMMENT BELOW**//
+//PrintStartupChecklist();
 
 try
 {
-    var cliPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "vendor", "copilot", "copilot.exe");
+    var filebytes = await File.ReadAllBytesAsync("C:/CAE_Docs/procedure_qwen3.8 1.pdf");
+    using var client = new CopilotClient();
+    await client.StartAsync();
 
-    var gitHubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN", EnvironmentVariableTarget.User)
-               ?? throw new InvalidOperationException("GITHUB_TOKEN environment variable is not set. Please set it in your user environment variables and try again.");
-
-    if (string.IsNullOrWhiteSpace(gitHubToken))
+    var providerConfig = new ProviderConfig
     {
-        throw new InvalidOperationException("GITHUB_TOKEN environment variable is empty. Please set it in your system environment variables and try again.");
-    }
-
-    if (!File.Exists(cliPath))
-    {
-        throw new FileNotFoundException($"GitHub Copilot CLI exe not found at expected path: {cliPath}. Please ensure it is installed and try again.");
-    }
-
-    using var response = await httpClient.GetAsync(apiHealthCheckUrl);
-    response.EnsureSuccessStatusCode();
-
-    ConsoleUi.WriteSuccess("CAE web service is accessible.");
-    ConsoleUi.WriteBlankLine();
-
-    // Initialize the client
-    await using CopilotClient copilotClient = new(new CopilotClientOptions()
-    {
-        CliPath = cliPath,
-        GitHubToken = gitHubToken,
-        UseLoggedInUser = false
-    });
-
-    await copilotClient.StartAsync();
-
-    var gitHubCoPilotSession = new SessionConfig()
-    {
-        Model = "GPT-5.4",
-        Streaming = true,
-        OnPermissionRequest = PermissionHandler.ApproveAll,
-        InfiniteSessions = new InfiniteSessionConfig { Enabled = true }
+        Type = "openai", // Options: "openai", "azure", "anthropic"
+        BaseUrl = "https://ia.devops.lattes.se.com/v1", // Or your custom/Azure gateway endpoint
+        ApiKey = "0e59c7673a7197dd6191045edfcdaf36dce2311328a6dce4eff77e01c50ebb55",
+        WireApi = "completions" // "completions" or "responses" depending on target API capability
     };
 
-    GitHubCopilotAgent caeModelAgent = new GitHubCopilotAgent(copilotClient,
-        gitHubCoPilotSession,
-        description: "You are a helpful assistant for CAE model comparison. " +
-        "Your task is to analyze and compare the source and target model data provided in json format " +
-        "and provide insights on the differences between them. " +
-        "Focus on identifying new models added, models deleted, permission changes and any other significant changes. " +
-        "Present your analysis in a clear and concise manner, " +
-        "using tables where appropriate to highlight the differences." +
-        "Always use a table for summary before presenting the analysis"
-        );
-
-    AgentSession session = await caeModelAgent.CreateSessionAsync();
-
-    var userCredentials = new UserCredentials
+    var sessionConfig = new SessionConfig
     {
-        UserName = ConsoleUi.PromptRequired("UserName"),
-        Password = ConsoleUi.PromptRequired("Password", secret: true)
+        Model = "Qwen/Qwen3.8-27B", // The deployment/model name on your custom provider
+        Provider = providerConfig,
+        OnPermissionRequest = PermissionHandler.ApproveAll, // Auto-approve agent tools if used
+
     };
 
-    using var httpClientForWorkflow = serviceProvider.GetRequiredService<IHttpClientFactory>().CreateClient("cae_api_client");
-    var authenticateExecutor = new AuthenticateExecutor(httpClientForWorkflow, memoryCache);
-    var importProjectExecutor = new ImportProjectExecutor(httpClientForWorkflow, memoryCache);
-    var modelDataExecutor = new ModelDataExecutor(httpClientForWorkflow);
-    var tempJsonFileGeneratorExecutor = new TempJsonFileGeneratorExecutor(memoryCache);
+    var session = await client.CreateSessionAsync(sessionConfig);
 
-    var workflow = new WorkflowBuilder(authenticateExecutor)
-        .AddEdge(authenticateExecutor, importProjectExecutor)
-        .AddEdge(importProjectExecutor, modelDataExecutor)
-        .AddEdge(modelDataExecutor, tempJsonFileGeneratorExecutor)
-        .WithOutputFrom(tempJsonFileGeneratorExecutor)
-        .Build();
-
-    var result = await InProcessExecution.RunAsync(workflow, userCredentials);
-
-    foreach (WorkflowEvent evt in result.OutgoingEvents)
+    var response = await session.SendAndWaitAsync(new MessageOptions
     {
-        switch (evt)
-        {
-            case ExecutorFailedEvent failed:
-                WriteError($"Step {failed.ExecutorId} failed: {failed.Data}");
-                break;
-
-            case WorkflowErrorEvent error:
-                WriteError($"Workflow encountered an error: {error?.Exception?.Message}");
-                break;
-
-            case WorkflowOutputEvent output:
-                if (await HandleWorkflowOutputAsync(output, caeModelAgent, session))
+        Prompt = "Explain how to use Qwen model from the attached PDF, The pdf file contents are attcahed with the message.",
+        Attachments = new List<GitHub.Copilot.Attachment>
+            {
+                new AttachmentFile
                 {
-                    return;
-                }
-                break;
-        }
-    }
+                    Path = "C:/CAE_Docs/procedure_qwen3.8 1.pdf",
+                    DisplayName = "procedure_qwen3.8 1.pdf",
+                },
+            },
+    }, timeout: TimeSpan.FromMinutes(10));
+
+    Console.WriteLine(response.Data.Content);
+
+    await client.StopAsync();
+
+    //**UNCOMMENT BELOW**//
+    //var cliPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "vendor", "copilot", "copilot.exe");
+
+    //var gitHubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN", EnvironmentVariableTarget.User)
+    //           ?? throw new InvalidOperationException("GITHUB_TOKEN environment variable is not set. Please set it in your user environment variables and try again.");
+
+    //if (string.IsNullOrWhiteSpace(gitHubToken))
+    //{
+    //    throw new InvalidOperationException("GITHUB_TOKEN environment variable is empty. Please set it in your system environment variables and try again.");
+    //}
+
+    //if (!File.Exists(cliPath))
+    //{
+    //    throw new FileNotFoundException($"GitHub Copilot CLI exe not found at expected path: {cliPath}. Please ensure it is installed and try again.");
+    //}
+
+    //using var response = await httpClient.GetAsync(apiHealthCheckUrl);
+    //response.EnsureSuccessStatusCode();
+
+    //ConsoleUi.WriteSuccess("CAE web service is accessible.");
+    //ConsoleUi.WriteBlankLine();
+
+    //// Initialize the client
+    //await using CopilotClient copilotClient = new(new CopilotClientOptions()
+    //{
+    //    CliPath = cliPath,
+    //    GitHubToken = gitHubToken,
+    //    UseLoggedInUser = false
+    //});
+
+    //await copilotClient.StartAsync();
+
+    //var gitHubCoPilotSession = new SessionConfig()
+    //{
+    //    Model = "GPT-5.4",
+    //    Streaming = true,
+    //    OnPermissionRequest = PermissionHandler.ApproveAll,
+    //    InfiniteSessions = new InfiniteSessionConfig { Enabled = true }
+    //};
+
+    //GitHubCopilotAgent caeModelAgent = new GitHubCopilotAgent(copilotClient,
+    //    gitHubCoPilotSession,
+    //    description: "You are a helpful assistant for CAE model comparison. " +
+    //    "Your task is to analyze and compare the source and target model data provided in json format " +
+    //    "and provide insights on the differences between them. " +
+    //    "Focus on identifying new models added, models deleted, permission changes and any other significant changes. " +
+    //    "Present your analysis in a clear and concise manner, " +
+    //    "using tables where appropriate to highlight the differences." +
+    //    "Always use a table for summary before presenting the analysis"
+    //    );
+
+    //AgentSession session = await caeModelAgent.CreateSessionAsync();
+
+    //var userCredentials = new UserCredentials
+    //{
+    //    UserName = ConsoleUi.PromptRequired("UserName"),
+    //    Password = ConsoleUi.PromptRequired("Password", secret: true)
+    //};
+
+    //using var httpClientForWorkflow = serviceProvider.GetRequiredService<IHttpClientFactory>().CreateClient("cae_api_client");
+    //var authenticateExecutor = new AuthenticateExecutor(httpClientForWorkflow, memoryCache);
+    //var importProjectExecutor = new ImportProjectExecutor(httpClientForWorkflow, memoryCache);
+    //var modelDataExecutor = new ModelDataExecutor(httpClientForWorkflow);
+    //var tempJsonFileGeneratorExecutor = new TempJsonFileGeneratorExecutor(memoryCache);
+
+    //var workflow = new WorkflowBuilder(authenticateExecutor)
+    //    .AddEdge(authenticateExecutor, importProjectExecutor)
+    //    .AddEdge(importProjectExecutor, modelDataExecutor)
+    //    .AddEdge(modelDataExecutor, tempJsonFileGeneratorExecutor)
+    //    .WithOutputFrom(tempJsonFileGeneratorExecutor)
+    //    .Build();
+
+    //var result = await InProcessExecution.RunAsync(workflow, userCredentials);
+
+    //foreach (WorkflowEvent evt in result.OutgoingEvents)
+    //{
+    //    switch (evt)
+    //    {
+    //        case ExecutorFailedEvent failed:
+    //            WriteError($"Step {failed.ExecutorId} failed: {failed.Data}");
+    //            break;
+
+    //        case WorkflowErrorEvent error:
+    //            WriteError($"Workflow encountered an error: {error?.Exception?.Message}");
+    //            break;
+
+    //        case WorkflowOutputEvent output:
+    //            if (await HandleWorkflowOutputAsync(output, caeModelAgent, session))
+    //            {
+    //                return;
+    //            }
+    //            break;
+    //    }
+    //}
 }
 catch (Exception ex)
 {
@@ -141,7 +181,8 @@ catch (Exception ex)
 }
 finally
 {
-    await CleanUpArtifacts();
+    //** Uncomment below **//
+    //await CleanUpArtifacts();
 }
 
 async Task<bool> HandleWorkflowOutputAsync(WorkflowOutputEvent output, GitHubCopilotAgent caeModelAgent, AgentSession session)

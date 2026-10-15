@@ -5,7 +5,7 @@ import { HttpAgent } from '@ag-ui/client';
 
 const runtime = new CopilotRuntime({
   agents: {
-    default: new HttpAgent({ url: 'https://localhost:7275/human_in_the_loop' }),
+    default: new HttpAgent({ url: 'https://localhost:7160/api/agents/compareModels' }),
   },
   /* intelligence: new CopilotKitIntelligence({
     apiKey: process.env['COPILOTKIT_API_KEY'] ?? '',
