@@ -1,8 +1,10 @@
 using Enterprise_Api_Sample.Global;
+using Enterprise_Api_Sample.Weather;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddExceptionHandler<ApplicationExceptionHandler>();
@@ -19,6 +21,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseExceptionHandler();
+
+app.MapControllers();
+app.MapWeatherSimulation();
 
 app.MapGet("/api/trouble", () =>
 {

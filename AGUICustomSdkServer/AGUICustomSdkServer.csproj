@@ -8,6 +8,9 @@
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.VectorData.SqliteVec" Version="1.0.2-preview" />
+    <PackageReference Include="CsvHelper" Version="34.0.0" />
+    <PackageReference Include="DocumentFormat.OpenXml" Version="3.5.1" />
+    <PackageReference Include="ExcelDataReader" Version="3.9.0" />
     <PackageReference Include="Microsoft.Agents.AI" Version="1.23.0" />
     <PackageReference Include="Microsoft.Agents.AI.Hosting.AGUI.AspNetCore" Version="1.23.0-preview.260928.1" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
@@ -17,6 +20,7 @@
     <PackageReference Include="Microsoft.SemanticKernel.Connectors.AzureOpenAI" Version="1.81.0" />
     <PackageReference Include="OpenAI" Version="2.14.0" />
     <PackageReference Include="PdfPig" Version="0.1.16" />
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="10.0.14" />
   </ItemGroup>
 
 </Project>

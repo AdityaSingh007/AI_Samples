@@ -33,12 +33,12 @@ namespace AGUI_Console_Client
         {
             new(ChatRole.User,
             [
-                new TextContent("Are there any benefits for buying EV as per car lease policy."),
+                new TextContent("As per the car lease policy what is the electric vehicle purchase benefit ?"),
                 //fileData,
             ]),
         };
             messagesPerTurn?.Add(messages.ToList());
-            await output.WriteLineAsync($"> Are there any benefits for buying EV as per car lease policy. ({bytes.Length} bytes)").ConfigureAwait(false);
+            await output.WriteLineAsync($"> Explain how residual value or RV is calculated as per car lease policy. ({bytes.Length} bytes)").ConfigureAwait(false);
 
             var updates = new List<ChatResponseUpdate>();
             await foreach (var update in chatClient.GetStreamingResponseAsync(

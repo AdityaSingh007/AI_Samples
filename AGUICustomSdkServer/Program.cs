@@ -1,6 +1,9 @@
 using AGUICustomSdkServer.AgentTools;
+using AGUICustomSdkServer.Interfaces;
+using AGUICustomSdkServer.MinimalApiEndpoints;
 using AGUICustomSdkServer.PdfIngestion;
 using AGUICustomSdkServer.SearchServices;
+using AGUICustomSdkServer.Services;
 using Azure.AI.OpenAI;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Hosting.AGUI.AspNetCore;
@@ -14,17 +17,24 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
-builder.Services.AddSingleton(sp =>
+builder.Services.AddAntiforgery(options => options.HeaderName = "X-CSRF-TOKEN");
+builder.Services.AddKeyedChatClient("se-qwen-chatClient", sp =>
 {
     var qwenModelName = builder.Configuration["QwenModelName"];
     var modelUrl = builder.Configuration["ModelDeploymentUrl"];
-    var openAIClient = new OpenAIClient(new ApiKeyCredential("0e59c7673a7197dd6191045edfcdaf36dce2311328a6dce4eff77e01c50ebb55"),
+    var qwenToken = Environment.GetEnvironmentVariable("qwen_Token", EnvironmentVariableTarget.User);
+    if (string.IsNullOrWhiteSpace(qwenToken))
+    {
+        throw new InvalidOperationException("The user environment variable 'qwen_Token' is not configured.");
+    }
+
+    var openAIClient = new OpenAIClient(new ApiKeyCredential(qwenToken),
         new OpenAIClientOptions()
         {
             Endpoint = new Uri(modelUrl),
         });
 
-    return openAIClient.GetChatClient(qwenModelName);
+    return openAIClient.GetChatClient(qwenModelName).AsIChatClient();
 });
 
 builder.Services.AddKeyedChatClient("AzureOpenAIChatClient", sp =>
@@ -60,6 +70,7 @@ builder.Services.AddEmbeddingGenerator(sp =>
 
 builder.Services.AddSingleton<IPdfIngestion, PdfIngestion>();
 builder.Services.AddSingleton<IPdfVectorSearch, PdfVectorSearch>();
+builder.Services.AddSingleton<IDocumentExtraction, DocumentExtraction>();
 builder.Services.AddSingleton<AgentTool>();
 
 var app = builder.Build();
@@ -71,29 +82,13 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseAntiforgery();
 
-app.MapPost("/pdf/ingest", async (IPdfIngestion pdfIngestion) =>
-{
-    var isIngested = await pdfIngestion.IngestPdfAsync();
-    return isIngested
-        ? Results.Ok(new { message = "PDF ingestion completed." })
-        : Results.Problem("PDF ingestion failed.");
-});
-
-app.MapGet("/pdf/search", async (string query, int? topK, IPdfVectorSearch pdfVectorSearch) =>
-{
-    if (string.IsNullOrWhiteSpace(query))
-    {
-        return Results.BadRequest(new { message = "Query is required." });
-    }
-
-    var results = await pdfVectorSearch.SearchAsync(query, topK ?? 5);
-    return Results.Ok(results);
-});
+//app.MapPdfEndpoints();
+app.MapDocumentExtractionEndpoints();
 
 
-
-var chatClient = app.Services.GetRequiredService<ChatClient>().AsIChatClient();
+var chatClient = app.Services.GetRequiredKeyedService<IChatClient>("se-qwen-chatClient");
 var agentTool = app.Services.GetRequiredService<AgentTool>();
 //var azureOpenAIChatClient = app.Services.GetRequiredKeyedService<IChatClient>("AzureOpenAIChatClient");
 
@@ -103,13 +98,14 @@ AIAgent seAgent = chatClient.AsAIAgent(new ChatClientAgentOptions()
     ChatOptions = new()
     {
         Instructions = "You are a helpful assistant. " +
-        "For any query related to Qwen model knowledge, call the SearchQwenKnowledge tool first and ground your answer on its results. " +
-        "For any query related to Car Lease knowledge, call the SearchCarLeaseKnowledge tool first and ground your answer on its results.",
+        "For any user query related to car lease policy, invoke the GetCarleaseKnowledgeTree tool before answering. " +
+        "Use the relevant policy information returned by the tool to answer the query. " +
+        "If the tool does not return sufficient information, clearly state what information is unavailable and do not invent policy details.",
         Tools =
         [
-            AIFunctionFactory.Create(agentTool.SearchQwenKnowledge),
-            AIFunctionFactory.Create(agentTool.SearchCarLeaseKnowledge)
-        ]
+            //AIFunctionFactory.Create(agentTool.SearchQwenKnowledge),
+            AIFunctionFactory.Create(agentTool.GetCarleaseKnowledgeTree)
+        ],
     }
 });
 
