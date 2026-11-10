@@ -98,13 +98,13 @@ AIAgent seAgent = chatClient.AsAIAgent(new ChatClientAgentOptions()
     ChatOptions = new()
     {
         Instructions = "You are a helpful assistant. " +
-        "For any user query related to car lease policy, invoke the GetCarleaseKnowledgeTree tool before answering. " +
-        "Use the relevant policy information returned by the tool to answer the query. " +
-        "If the tool does not return sufficient information, clearly state what information is unavailable and do not invent policy details.",
+        "For any user query related to India-Electric-Mobility-Index, invoke the GetIndiaElectricMobilityIndexKnowledgeTree tool before answering. " +
+        "Use the relevant information returned by the tool to answer the query. " +
+        "If the tool does not return sufficient information, clearly state what information is unavailable and do not invent details.",
         Tools =
         [
             //AIFunctionFactory.Create(agentTool.SearchQwenKnowledge),
-            AIFunctionFactory.Create(agentTool.GetCarleaseKnowledgeTree)
+            AIFunctionFactory.Create(agentTool.GetIndiaElectricMobilityIndexKnowledgeTree)
         ],
     }
 });

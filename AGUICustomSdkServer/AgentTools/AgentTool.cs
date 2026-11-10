@@ -58,8 +58,8 @@ namespace AGUICustomSdkServer.AgentTools
             }
         }
 
-        [Description("Call this tool first whenever the user asks any car lease-related question. Retrieves the car lease document's JSON tree hierarchy for vectorless retrieval-augmented generation (RAG), including section titles, summaries, and reference locations. Use the hierarchy to identify relevant document sections; it is a structural index, not the full document content, and does not perform vector search.")]
-        public async Task<string> GetCarleaseKnowledgeTree(string query)
+        [Description("Call this tool first whenever the user asks any India-Electric-Mobility-Index question. Retrieves the India-Electric-Mobility-Index document's JSON tree hierarchy for vectorless retrieval-augmented generation (RAG), including section titles, summaries, and reference locations. Use the hierarchy to identify relevant document sections; it is a structural index, not the full document content, and does not perform vector search.")]
+        public async Task<string> GetIndiaElectricMobilityIndexKnowledgeTree(string query)
         {
             if (string.IsNullOrWhiteSpace(query))
             {
@@ -68,9 +68,9 @@ namespace AGUICustomSdkServer.AgentTools
 
             try
             {
-                if(File.Exists("Data/Company Leased Car Scheme_April 2026_tree.json"))
+                if(File.Exists("Data/India-Electric-Mobility-Index-IEMI-2025_tree.json"))
                 {
-                    var treeStructure = await File.ReadAllTextAsync("Data/Company Leased Car Scheme_April 2026_tree.json");
+                    var treeStructure = await File.ReadAllTextAsync("Data/India-Electric-Mobility-Index-IEMI-2025_tree.json");
                     string prompt = "Select only sections directly relevant to the user's query and return only their page numbers as a JSON array of integers. " +
         "Use only page numbers explicitly present in the tree's referenceLocation or page metadata; never infer or invent them. " +
         "Omit sections without explicit page numbers and remove duplicate page numbers. " +
@@ -89,15 +89,16 @@ namespace AGUICustomSdkServer.AgentTools
                     Console.WriteLine(string.Join(",", pagenumbers));
 
                     var sb = new StringBuilder();
-                    using (var pdf = PdfDocument.Open("C:\\CAE_Docs\\Company Leased Car Scheme_April 2026.pdf"))
+                    using (var pdf = PdfDocument.Open("C:\\CAE_Docs\\India-Electric-Mobility-Index-IEMI-2025.pdf"))
                     {
-                        foreach (var page in pdf.GetPages())
+                        foreach (var pageNumber in pagenumbers
+                            .Where(number => number >= 1 && number <= pdf.NumberOfPages)
+                            .Distinct()
+                            .OrderBy(number => number))
                         {
-                            if(pagenumbers.Contains(page.Number))
-                            {
-                                sb.AppendLine($"--- [Page {page.Number}] ---");
-                                sb.AppendLine(page.Text);
-                            }
+                            var page = pdf.GetPage(pageNumber);
+                            sb.AppendLine($"--- [Page {page.Number}] ---");
+                            sb.AppendLine(page.Text);
                         }
                     }
                     
